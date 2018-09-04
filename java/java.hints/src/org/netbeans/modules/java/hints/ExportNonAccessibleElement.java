@@ -79,7 +79,7 @@ import org.openide.util.NbBundle;
  * @author Jaroslav tulach
  */
 public class ExportNonAccessibleElement extends AbstractHint 
-implements ElementVisitor<Boolean,Void>, TypeVisitor<Boolean,Void> {
+implements ElementVisitor<TypeMirror,Void>, TypeVisitor<Boolean,Void> {
     private static final Set<Kind> DECLARATION = EnumSet.of(Kind.ANNOTATION_TYPE, Kind.CLASS, Kind.ENUM, Kind.INTERFACE, Kind.METHOD, Kind.VARIABLE);
     private transient volatile boolean stop;
     
@@ -95,13 +95,13 @@ implements ElementVisitor<Boolean,Void>, TypeVisitor<Boolean,Void> {
     public List<ErrorDescription> run(CompilationInfo compilationInfo,
                                       TreePath treePath) {
         stop = false;
-        Element e = compilationInfo.getTrees().getElement(treePath);
+        Element e = compilationInfo.getTrees().getElement(treePath);        
         if (e == null) {
             return null;
         }
-        Boolean b = e.accept(this, null);
-
-        if (b) {
+        TypeMirror b = e.accept(this, null);
+        
+        if (b!= null) { 
             Element parent = e;
             for (;;) {
                 if (stop) {
@@ -116,7 +116,7 @@ implements ElementVisitor<Boolean,Void>, TypeVisitor<Boolean,Void> {
                 }
                 parent = parent.getEnclosingElement();
             }
-
+            
             //#124456: disabling the fix:
 //            List<Fix> fixes = Collections.<Fix>singletonList(new FixImpl(
 //                "MSG_ExportNonAccessibleElementMakeNonVisible", // NOI18N
@@ -139,7 +139,7 @@ implements ElementVisitor<Boolean,Void>, TypeVisitor<Boolean,Void> {
             if (span != null) {
                 ErrorDescription ed = ErrorDescriptionFactory.createErrorDescription(
                         getSeverity().toEditorSeverity(),
-                        NbBundle.getMessage(ExportNonAccessibleElement.class, "MSG_ExportNonAccessibleElement"),
+                        NbBundle.getMessage(ExportNonAccessibleElement.class, "MSG_ExportNonAccessibleElement", b),
 //                        fixes,
                         compilationInfo.getFileObject(),
                         span[0],
@@ -177,37 +177,42 @@ implements ElementVisitor<Boolean,Void>, TypeVisitor<Boolean,Void> {
     public JComponent getCustomizer(Preferences node) {
         return null;
     }    
-    public Boolean visit(Element arg0, Void arg1) {
+    @Override
+    public TypeMirror visit(Element arg0, Void arg1) {
         // no need for hint
-        return false;
+        return null;
     }
 
-    public Boolean visit(Element arg0) {
+    @Override
+    public TypeMirror visit(Element arg0) {
         // no need for hint
-        return false;
+        return null;
     }
 
-    public Boolean visitModule(ModuleElement e, Void p) {
-        return false;
+    @Override
+    public TypeMirror visitModule(ModuleElement e, Void p) {
+        return null;
     }
 
-    public Boolean visitPackage(PackageElement arg0, Void arg1) {
-        return false;
+    @Override
+    public TypeMirror visitPackage(PackageElement arg0, Void arg1) {
+        return null;
     }
 
-    public Boolean visitType(TypeElement arg0, Void arg1) {
+    @Override
+    public TypeMirror visitType(TypeElement arg0, Void arg1) {
         for (TypeParameterElement e : arg0.getTypeParameters()) {
             if (stop) {
-                return false;
+                return null;
             }
             
             for (TypeMirror b : e.getBounds()) {
                 if (stop) {
-                    return false;
+                    return null;
                 }
                 
                 if (b.accept(this, arg1)) {
-                    return true;
+                    return (TypeMirror) b;
                 }
             }
         }
@@ -215,45 +220,58 @@ implements ElementVisitor<Boolean,Void>, TypeVisitor<Boolean,Void> {
         TypeMirror superclass = arg0.getSuperclass();
         if (superclass.getKind() == TypeKind.DECLARED) {
             if (!((DeclaredType) superclass).asElement().getKind().isInterface()) {
-                return false;
+                return null;
             }
         }
 
-        return superclass.accept(this, arg1);
+        if (superclass.accept(this, arg1)) {
+            return superclass;
+        }
+        return null;
     }
 
-    public Boolean visitVariable(VariableElement field, Void arg1) {
+    @Override
+    public TypeMirror visitVariable(VariableElement field, Void arg1) {
         if (!isVisible(field)) {
             // no need for hint
-            return false;
+            return null;
         }
-        return field.asType().accept(this, arg1);
+        if(field.asType().accept(this, arg1)) {
+            return field.asType();
+        }
+        return null;
     }
 
-    public Boolean visitExecutable(ExecutableElement method, Void nothing) {
+    @Override
+    public TypeMirror visitExecutable(ExecutableElement method, Void nothing) {
         if (!isVisible(method)) {
             // ok
-            return false;
+            return null;
         }
         for (VariableElement v : method.getParameters()) {
             if (stop) {
-                return false;
+                return null;
             }
             
             if (v.asType().accept(this, nothing)) {
-                return true;
+                return v.asType();
             }
         }
-        return method.getReturnType().accept(this, nothing);
+        if (method.getReturnType().accept(this, nothing)) {
+            return method.getReturnType();
+        }
+        return null;
     }
 
-    public Boolean visitTypeParameter(TypeParameterElement arg0, Void arg1) {
-        return false;
+    @Override
+    public TypeMirror visitTypeParameter(TypeParameterElement arg0, Void arg1) {
+        return null;
     }
 
-    public Boolean visitUnknown(Element arg0, Void arg1) {
+    @Override
+    public TypeMirror visitUnknown(Element arg0, Void arg1) {
         // ok, probably no need for hint
-        return false;
+        return null;
     }
 
 

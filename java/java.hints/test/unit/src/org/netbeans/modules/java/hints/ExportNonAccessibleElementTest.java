@@ -54,7 +54,7 @@ public class ExportNonAccessibleElementTest extends TreeRuleTestBase {
             "}";
         
         performAnalysisTest("test/Test.java", before + after, before.length(), 
-            "0:63-0:66:verifier:Exporting non-public type through public API"
+            "0:63-0:66:verifier:Exporting non-public type test.Test.Inner through public API"
         );
     }
 
@@ -158,7 +158,7 @@ public class ExportNonAccessibleElementTest extends TreeRuleTestBase {
         "}";
         
         performAnalysisTest("test/Test.java", before + after, before.length(),
-            "0:69-0:77:verifier:Exporting non-public type through public API");       
+            "0:69-0:77:verifier:Exporting non-public type proxy.test.impl.I2 through public API");       
         
     }
     public void testWildCards() throws Exception {
@@ -171,7 +171,7 @@ public class ExportNonAccessibleElementTest extends TreeRuleTestBase {
         "}";
         
         performAnalysisTest("test/Test.java", before + after, before.length(),
-            "0:101-0:109:verifier:Exporting non-public type through public API");       
+            "0:101-0:109:verifier:Exporting non-public type java.util.Collection<? extends proxy.test.impl.I2> through public API");       
         
     }
     public void testWildCardsSuper() throws Exception {
@@ -184,7 +184,7 @@ public class ExportNonAccessibleElementTest extends TreeRuleTestBase {
         "}";
         
         performAnalysisTest("test/Test.java", before + after, before.length(),
-            "0:99-0:107:verifier:Exporting non-public type through public API");       
+            "0:99-0:107:verifier:Exporting non-public type java.util.Collection<? super proxy.test.impl.I2> through public API");       
         
     }
     public void testWildCardsIssue108829() throws Exception {
